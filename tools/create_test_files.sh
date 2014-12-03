@@ -79,6 +79,12 @@ function parse_config ()
 			IFS='@' read -r -a second_lvl_dirs <<< "$cfg_value"
 			;;
 		third_level_dirs) continue;;
+		base_dir) [ "$cfg_value" = "" ] && continue
+			base_dir=$cfg_value;;
+		file_nums) [ "cfg_value" = "" ] && continue
+			file_nums=$cfg_value;;
+		ext) [ "cfg_value" = "" ] && continue
+			ext=$cfg_value;;
 		esac
 
 	done
@@ -91,10 +97,62 @@ function parse_config ()
 
 	[ $len1 -eq 0 -o $len2 -eq 0 ] && ret=1
 
-	DEBUG echo ${first_lvl_dirs[*]}
-	DEBUG echo ${second_lvl_dirs[*]}
+	INFO echo ${first_lvl_dirs[*]}
+	INFO echo ${second_lvl_dirs[*]}
 
 	return $ret
+}
+
+function create_files ()
+{
+	len1=${#first_lvl_dirs[@]}
+	len2=${#second_lvl_dirs[@]}
+
+	[ $len1 -eq 0 -o $len2 -eq 0 ] && return 1
+
+	if [ "$base_dir" = "" ]; then
+		base_dir="../data/"
+	fi
+
+	if [ "$ext" = "" ]; then
+		ext=".png"
+	fi
+
+	if [[ $file_nums -eq 0 || $file_nums -gt 26 ]]; then
+		file_nums=10
+	fi
+	if [ "$file_nums" = "" ]; then
+		file_nums=10
+	fi
+
+	declare -a names=('a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j' 'k' 'l' 'm' 'n' 'o' 'p' 'q' 'r' 's' 't' 'u' 'v' 'w' 'x' 'y' 'w')
+	names[$file_nums]="0"
+	
+	for dir in ${first_lvl_dirs[@]}
+	do
+		fir_dir=${base_dir}${dir}
+		[ ! -d "$fir_dir" ] && { mkdir -p "$fir_dir"; }
+
+		for dir2 in ${second_lvl_dirs[@]}
+		do
+			sec_dir=${fir_dir}"/"${dir2}
+			[ ! -d $sec_dir ] && { mkdir -p $sec_dir; }
+
+			for fil_nam in ${names[@]}
+			do
+				if [ "$fil_nam" = "0" ]; then
+					break
+				fi
+				file_name=${sec_dir}"/"${fil_nam}${ext}
+				INFO echo $file_name
+				[ ! -f $file_name ] && { touch $file_name; }
+			done
+
+		done
+
+	done
+
+	return 0
 }
 
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-DEBUG="true"
+DEBUG="false"
+INFO="true"
 
 [ $# -ne 1 ] && { echo "Usage:One config file needed."; exit; }
 
@@ -16,4 +17,7 @@ fi
 #unset -x
 
 parse_config $1
+
+create_files
+
 
