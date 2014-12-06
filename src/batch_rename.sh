@@ -68,6 +68,48 @@ function check_is_all_child_files()
 	return 0
 }
 
+#-----------------------------
+#@params: full dir
+#@return: basename of dir path
+#@author: lifulong
+#-----------------------------
+function get_dir_name()
+{
+	full_dir=$1
+	#full_dir=${full_dir/%\//}
+
+	dir_name=`basename $full_dir`
+
+	echo $dir_name
+}
+
+#-----------------------------
+#@params: dir name
+#@return: add dir name to all_dirs
+#@author: lifulong
+#-----------------------------
+function add_child_dir()
+{
+	getit=0
+	child_dir=$1
+	[ ! -d $child_dir ] && { return 1; }
+
+	real_childdir=`get_dir_name $child_dir`
+
+	for dir in ${output_child_dirs[@]}
+	do
+		if [ "$dir" = "$real_childdir" ]; then
+			getit=1
+			break
+		fi
+	done
+
+	if [ $getit -eq 0 ]; then
+		output_child_dirs[$total_dirs]=$real_childdir
+		total_dirs=$[total_dirs+1]
+	fi
+}
+
 #--------------------------
 #params: top_dir
 #return: get result
@@ -93,8 +135,7 @@ function get_child_dirs()
 	check_is_all_child_files $1
 	[ $? -ne 0 ] && { return 1; }
 
-	output_child_dirs[$total_dirs]=$top_dir
-	total_dirs=$[total_dirs+1]
+	add_child_dir $top_dir
 
 	return 0
 }
@@ -147,34 +188,33 @@ function mk_name()
 #--------------------------
 function do_rename()
 {
-	echo "1.2    $0:$1:$2"
 	local from_dir=$1
 	local to_dir=$2
+	INFO echo "from_dir:$from_dir to_dir:$to_dir"
 	check_is_all_child_files $from_dir
 	if [ $? -eq 0 ]; then
+		local base_fromdir=`basename $from_dir`
+		local base_todir=`basename $to_dir`
+		[ "$base_fromdir" != "$base_todir" ] && { return 0; }
 		num=`ls -l $to_dir | wc -l`
 		for fil in `ls $1`
 		do
 			ext=`get_ext $fil`
 			name=`mk_name $num $ext`
-			echo "name:$name"
-			echo "from_dir:$from_dir to_dir:$to_dir"
 			cp ${from_dir}"/"${fil} ${to_dir}"/"${name}
 			num=$[num+1]
-			echo ""
-			exit 0
 		done
 	else
 		check_is_all_child_dirs $from_dir
 		if [ $? -eq 0 ]; then
 			for dir in `ls $from_dir`
 			do
-				_from_dir=${form_dir}"/"${dir}
-				echo "_from_dir:$_from_dir to_dir:$to_dir"
+				_from_dir=${from_dir}"/"${dir}
 				do_rename $_from_dir $to_dir
-				[ $? -ne 0 ] && { return 1; }
+				[ $? -ne 0 ] && { echo "return not zero:$?"; }
 			done
 		else
+			echo "do_rename:error while deal $from_dir $to_dir."
 			return 1
 		fi
 	fi
@@ -182,6 +222,11 @@ function do_rename()
 	return 0
 }
 
+#-----------------------
+#@params: from top dir, dest dir
+#@return: none
+#@author: lifulong
+#-----------------------
 function batch_rename()
 {
 	top_dir=$1
@@ -193,9 +238,8 @@ function batch_rename()
 
 	for dir in ${output_child_dirs[@]}
 	do
-		echo "Info: deal dir $dir ... ..."
+		INFO echo "Info: deal dir $dir ... ..."
 		realdir=${output_dir}"/"${dir}
-		DEBUG echo "realdir:$realdir"
 		mkdir -p $realdir
 		do_rename $top_dir $realdir
 	done
